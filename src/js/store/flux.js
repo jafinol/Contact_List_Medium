@@ -1,81 +1,53 @@
-const url = "https://assets.breatheco.de/apis/fake/contact/";
-const getState = ({ getStore, setStore }) => {
+import firebase from "firebase/app";
+import "firebase/firestore";
+
+const getState = ({ getStore, setStore, getActions }) => {
 	return {
 		store: {
 			contacts: []
 		},
 		actions: {
-			loadContact() {
-				fetch(url + "agenda/downtown_xii")
-					.then(response => response.json())
-					.then(result => {
-						console.log("Get Contact", result),
-							setStore({
-								contacts: result
-							});
-					})
-					.catch(e => console.error(e));
+			loadContactFB: async () => {
+				try {
+					const getContact = firebase.firestore().collection("contacts");
+					const response = await getContact.get();
+					let array = [];
+					response.forEach(contact => {
+						array.push({ ...contact.data(), id: contact.id });
+					});
+					setStore({ contacts: array });
+				} catch (e) {
+				} finally {
+				}
 			},
-			addContact(name, phone, email, address) {
-				fetch(url, {
-					method: "post",
-					headers: { "Content-type": "application/json" },
-					body: JSON.stringify({
+
+			deleteFB: id => {
+				firebase
+					.firestore()
+					.collection("contacts")
+					.doc(id)
+					.delete()
+					.catch(error => {
+						alert(error);
+					})
+					.then(() => getActions().loadContactFB());
+			},
+
+			addContactFB: (name, phone, email, address, id) => {
+				firebase
+					.firestore()
+					.collection("contacts")
+					.doc(id)
+					.set({
 						full_name: name,
 						phone: phone,
-						address: address,
 						email: email,
-						agenda_slug: "downtown_xii"
+						address: address
 					})
-				}).then(() => {
-					fetch(url + "agenda/downtown_xii")
-						.then(response => response.json())
-						.then(result => {
-							console.log("result", result),
-								setStore({
-									contacts: result
-								});
-						})
-						.catch(e => console.error(e));
-				});
-			},
-			editContact(id, name, phone, email, address) {
-				fetch(url + id, {
-					method: "put",
-					headers: { "Content-type": "application/json" },
-					body: JSON.stringify({
-						full_name: name,
-						phone: phone,
-						address: address,
-						email: email,
-						agenda_slug: "downtown_xii"
+					.catch(error => {
+						alert(error);
 					})
-				}).then(() => {
-					fetch(url + "agenda/downtown_xii")
-						.then(response => response.json())
-						.then(result => {
-							console.log("update", result),
-								setStore({
-									contacts: result
-								});
-						})
-						.catch(e => console.error(e));
-				});
-			},
-			deleteContact(id) {
-				fetch(url + id, {
-					method: "delete"
-				}).then(() => {
-					fetch(url + "agenda/downtown_xii")
-						.then(response => response.json())
-						.then(result => {
-							console.log("result", result),
-								setStore({
-									contacts: result
-								});
-						})
-						.catch(e => console.error(e));
-				});
+					.then(() => getActions().loadContactFB());
 			}
 		}
 	};
